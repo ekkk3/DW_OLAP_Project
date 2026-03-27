@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kho Dữ Liệu — OLAP Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Vietnamese:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    DW·OLAP
+  </div>
+  <div class="header-info">
+    <span class="status-dot"></span>
+    KHO DỮ LIỆU — HỆ THỐNG ĐẶT HÀNG &nbsp;|&nbsp; SQL Server &nbsp;|&nbsp; OLAP Engine
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Phép toán OLAP</div>
+      <button class="nav-btn active" onclick="showPanel('rollup')">
+        <span class="icon">⬆</span> Roll-up (Cuộn lên)
+      </button>
+      <button class="nav-btn" onclick="showPanel('drilldown')">
+        <span class="icon">⬇</span> Drill-down (Khoan xuống)
+      </button>
+      <button class="nav-btn" onclick="showPanel('slice')">
+        <span class="icon">✂</span> Slice & Dice (Cắt)
+      </button>
+      <button class="nav-btn" onclick="showPanel('pivot')">
+        <span class="icon">⟳</span> Pivot (Xoay)
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">9 Báo cáo phân tích</div>
+      <button class="nav-btn" onclick="showPanel('reports')">
+        <span class="icon">📊</span> Báo cáo OLAP
+        <span class="badge">9</span>
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Khám phá dữ liệu</div>
+      <button class="nav-btn" onclick="showPanel('inventory')">
+        <span class="icon">📦</span> Tồn kho (Fact_Ton_Kho)
+      </button>
+      <button class="nav-btn" onclick="showPanel('orders')">
+        <span class="icon">🛒</span> Đơn hàng (Fact_Order)
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Siêu dữ liệu</div>
+      <button class="nav-btn" onclick="showPanel('metadata')">
+        <span class="icon">🗂</span> Metadata & Index
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ===== ROLL-UP ===== -->
+    <div id="panel-rollup" class="panel active">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">⬆ Roll-up — Cuộn lên</div>
+          <div class="panel-sub">Tổng hợp dữ liệu từ mức chi tiết lên mức cao hơn trong phân cấp</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Phân cấp chiều Địa điểm</div>
+        <div class="hierarchy" id="hier-location">
+          <div class="hier-node active" data-level="0" onclick="setHier('location',0)">Cửa hàng</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="1" onclick="setHier('location',1)">Thành phố</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="2" onclick="setHier('location',2)">Bang</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="3" onclick="setHier('location',3)">Tất cả</div>
+        </div>
+        <div class="card-title" style="margin-top:1rem">Phân cấp chiều Thời gian</div>
+        <div class="hierarchy" id="hier-time">
+          <div class="hier-node active" data-level="0" onclick="setHierTime(0)">Ngày</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="1" onclick="setHierTime(1)">Tháng</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="2" onclick="setHierTime(2)">Quý</div>
+          <span class="hier-arrow">→</span>
+          <div class="hier-node" data-level="3" onclick="setHierTime(3)">Năm</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="ctrl-group">
+          <label>Measure</label>
+          <select id="ru-measure">
+            <option value="SUM(f.So_Luong_Ton_Kho)">Tổng tồn kho</option>
+            <option value="SUM(f.So_Luong_Dat)">Tổng số lượng đặt</option>
+            <option value="SUM(f.Tong_Tien)">Tổng doanh thu</option>
+            <option value="AVG(f.So_Luong_Ton_Kho)">TB tồn kho</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>Mặt hàng</label>
+          <select id="ru-mh">
+            <option value="">Tất cả</option>
+            <option value="MH001">Áo sơ mi</option>
+            <option value="MH002">Quần jeans</option>
+            <option value="MH003">Giày thể thao</option>
+            <option value="MH004">Túi xách</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="runRollup()">▶ Thực thi</button>
+      </div>
+
+      <div id="ru-sql" class="sql-box"><span class="sql-comment">-- Chọn cấp độ và nhấn Thực thi</span></div>
+
+      <div id="ru-result"></div>
+    </div>
+
+    <!-- ===== DRILL DOWN ===== -->
+    <div id="panel-drilldown" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">⬇ Drill-down — Khoan xuống</div>
+          <div class="panel-sub">Xem chi tiết hơn bằng cách đi sâu vào một mức thấp hơn trong phân cấp</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Điều hướng Drill-down</div>
+        <div class="breadcrumb" id="dd-breadcrumb">
+          <span>Tất cả</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="dd-drill-buttons">
+          <button class="btn btn-ghost" onclick="drillInto('Hà Nội')">🏙 Hà Nội</button>
+          <button class="btn btn-ghost" onclick="drillInto('TP.HCM')">🏙 TP.HCM</button>
+          <button class="btn btn-ghost" onclick="drillInto('Đà Nẵng')">🏙 Đà Nẵng</button>
+          <button class="btn btn-ghost" onclick="drillInto('Hải Phòng')">🏙 Hải Phòng</button>
+        </div>
+      </div>
+
+      <div id="dd-sql" class="sql-box"><span class="sql-comment">-- Click vào thành phố để khoan xuống cấp cửa hàng</span></div>
+      <div id="dd-result"></div>
+    </div>
+
+    <!-- ===== SLICE & DICE ===== -->
+    <div id="panel-slice" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">✂ Slice & Dice — Cắt dọc / Cắt ngang</div>
+          <div class="panel-sub">Lọc dữ liệu theo một hoặc nhiều điều kiện trên các chiều</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Điều kiện lọc (WHERE)</div>
+        <div class="controls">
+          <div class="ctrl-group">
+            <label>Thành phố</label>
+            <select id="sl-city">
+              <option value="">Tất cả</option>
+              <option value="Hà Nội">Hà Nội</option>
+              <option value="TP.HCM">TP.HCM</option>
+              <option value="Đà Nẵng">Đà Nẵng</option>
+              <option value="Hải Phòng">Hải Phòng</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Quý</label>
+            <select id="sl-quarter">
+              <option value="">Tất cả</option>
+              <option value="Q1">Q1</option>
+              <option value="Q2">Q2</option>
+              <option value="Q3">Q3</option>
+              <option value="Q4">Q4</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Năm</label>
+            <select id="sl-year">
+              <option value="">Tất cả</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Loại khách hàng</label>
+            <select id="sl-kh">
+              <option value="">Tất cả</option>
+              <option value="Du lịch">Du lịch</option>
+              <option value="Bưu điện">Bưu điện</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Tồn kho tối thiểu</label>
+            <input type="number" id="sl-minstock" placeholder="0" style="max-width:100px">
+          </div>
+          <button class="btn btn-primary" onclick="runSlice()">✂ Áp dụng</button>
+          <button class="btn btn-ghost" onclick="clearSlice()">✕ Xóa</button>
+        </div>
+      </div>
+
+      <div id="sl-sql" class="sql-box"><span class="sql-comment">-- Chọn điều kiện lọc và nhấn Áp dụng</span></div>
+      <div id="sl-result"></div>
+    </div>
+
+    <!-- ===== PIVOT ===== -->
+    <div id="panel-pivot" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">⟳ Pivot — Xoay bảng</div>
+          <div class="panel-sub">Chuyển hàng thành cột để xem dữ liệu từ góc độ khác</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Cấu hình Pivot</div>
+        <div class="controls">
+          <div class="ctrl-group">
+            <label>Hàng (Row dimension)</label>
+            <select id="pv-row">
+              <option value="city">Thành phố</option>
+              <option value="item">Mặt hàng</option>
+              <option value="customer">Loại khách hàng</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Cột (Column — Quý)</label>
+            <select id="pv-col">
+              <option value="quarter">Quý</option>
+              <option value="year">Năm</option>
+            </select>
+          </div>
+          <div class="ctrl-group">
+            <label>Measure</label>
+            <select id="pv-measure">
+              <option value="revenue">Doanh thu (triệu VNĐ)</option>
+              <option value="qty">Số lượng đặt</option>
+              <option value="stock">Tồn kho</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="runPivot()">⟳ Xoay</button>
+        </div>
+      </div>
+
+      <div id="pv-sql" class="sql-box"><span class="sql-comment">-- Cấu hình và nhấn Xoay để tạo bảng pivot</span></div>
+      <div id="pv-result"></div>
+    </div>
+
+    <!-- ===== REPORTS ===== -->
+    <div id="panel-reports" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📊 9 Báo cáo phân tích OLAP</div>
+          <div class="panel-sub">Các truy vấn phân tích trực tuyến theo yêu cầu nghiệp vụ</div>
+        </div>
+      </div>
+
+      <div class="reports-grid" id="reports-grid">
+        <div class="report-card active" onclick="selectReport(1)">
+          <span class="r-num">Q1</span>
+          <div class="r-title">Cửa hàng & mặt hàng đang lưu kho</div>
+        </div>
+        <div class="report-card" onclick="selectReport(2)">
+          <span class="r-num">Q2</span>
+          <div class="r-title">Đơn đặt hàng & tên khách hàng</div>
+        </div>
+        <div class="report-card" onclick="selectReport(3)">
+          <span class="r-num">Q3</span>
+          <div class="r-title">Cửa hàng có bán mặt hàng đặt bởi khách hàng</div>
+        </div>
+        <div class="report-card" onclick="selectReport(4)">
+          <span class="r-num">Q4</span>
+          <div class="r-title">Văn phòng đại diện lưu kho trên mức cụ thể</div>
+        </div>
+        <div class="report-card" onclick="selectReport(5)">
+          <span class="r-num">Q5</span>
+          <div class="r-title">Mặt hàng trong đơn hàng & cửa hàng có bán</div>
+        </div>
+        <div class="report-card" onclick="selectReport(6)">
+          <span class="r-num">Q6</span>
+          <div class="r-title">Thành phố & bang của khách hàng</div>
+        </div>
+        <div class="report-card" onclick="selectReport(7)">
+          <span class="r-num">Q7</span>
+          <div class="r-title">Mức tồn kho mặt hàng tại thành phố</div>
+        </div>
+        <div class="report-card" onclick="selectReport(8)">
+          <span class="r-num">Q8</span>
+          <div class="r-title">Chi tiết đơn đặt hàng đầy đủ</div>
+        </div>
+        <div class="report-card" onclick="selectReport(9)">
+          <span class="r-num">Q9</span>
+          <div class="r-title">Phân loại khách hàng (du lịch / bưu điện / cả hai)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" id="rpt-title">Q1 — Cửa hàng & mặt hàng đang lưu kho</div>
+        <div class="controls" id="rpt-params"></div>
+      </div>
+
+      <div id="rpt-sql" class="sql-box"></div>
+      <div id="rpt-result"></div>
+    </div>
+
+    <!-- ===== INVENTORY ===== -->
+    <div id="panel-inventory" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📦 Fact_Ton_Kho — Bảng sự kiện tồn kho</div>
+          <div class="panel-sub">Xem và phân tích dữ liệu tồn kho theo chiều</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Biểu đồ tồn kho theo thành phố</div>
+        <div class="bar-chart" id="inv-bar"></div>
+      </div>
+      <div id="inv-sql" class="sql-box"></div>
+      <div id="inv-result"></div>
+    </div>
+
+    <!-- ===== ORDERS ===== -->
+    <div id="panel-orders" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🛒 Fact_Order — Bảng sự kiện đơn hàng</div>
+          <div class="panel-sub">Xem và phân tích dữ liệu đơn đặt hàng</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('orders','table')">Bảng dữ liệu</button>
+        <button class="tab-btn" onclick="switchTab('orders','chart')">Biểu đồ doanh thu</button>
+      </div>
+      <div id="orders-tab-table" class="tab-panel active"></div>
+      <div id="orders-tab-chart" class="tab-panel"></div>
+    </div>
+
+    <!-- ===== METADATA ===== -->
+    <div id="panel-metadata" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🗂 Metadata & Index — Siêu dữ liệu kho</div>
+          <div class="panel-sub">Mô tả cấu trúc kho dữ liệu và các chỉ mục tối ưu hóa truy vấn</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bảng Fact</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tên bảng</th><th>Các khóa ngoại</th><th>Measures</th><th>Dòng (ước)</th></tr></thead>
+            <tbody>
+              <tr><td>Fact_Ton_Kho</td><td>Time_key, Ma_CH, Ma_MH</td><td>So_Luong_Ton_Kho</td><td class="num">50,000</td></tr>
+              <tr><td>Fact_Order</td><td>Time_key, Ma_KH, Ma_MH</td><td>So_Luong_Dat, Tong_Tien</td><td class="num">120,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bảng Dimension</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tên bảng</th><th>Khóa chính</th><th>Thuộc tính chính</th><th>Phân cấp</th></tr></thead>
+            <tbody>
+              <tr><td>Dim_Time</td><td>Time_key</td><td>Ngay, Thang, Quy, Nam</td><td>Ngày→Tháng→Quý→Năm</td></tr>
+              <tr><td>Dim_Mat_Hang</td><td>Ma_MH</td><td>Mo_Ta, Kich_Co, Trong_Luong, Gia</td><td>—</td></tr>
+              <tr><td>Dim_Khach_Hang</td><td>Ma_KH</td><td>Ten_KH, Loai_KH, Ma_TP</td><td>Loại KH</td></tr>
+              <tr><td>Dim_Cua_Hang</td><td>Ma_CH</td><td>SDT, ThoiGianMoCua, Ma_TP</td><td>CH→TP→Bang</td></tr>
+              <tr><td>Dim_Dia_Diem</td><td>Ma_TP</td><td>Ten_TP, Bang</td><td>TP→Bang→Tất cả</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Các Index tối ưu hóa truy vấn</div>
+        <div id="meta-sql" class="sql-box" style="margin-bottom:0"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
